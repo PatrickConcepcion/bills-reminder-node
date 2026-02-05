@@ -35,9 +35,7 @@ export async function getAllBills(userId: string) {
 
 export async function createBill(userId: string, payload: CreateBillInput) {
   const dueDate = new Date(payload.dueDate);
-  const nextDueDate = payload.isRecurring 
-    ? calculateNextDueDate(dueDate, payload.frequency)
-    : dueDate;
+  const nextDueDate = dueDate;
 
   const bill = repo.create({
     userId,
@@ -69,9 +67,7 @@ export async function updateBill(userId: string, id: string, payload: CreateBill
     if (!bill) return null;
 
     const dueDate = new Date(payload.dueDate);
-    const nextDueDate = payload.isRecurring 
-        ? calculateNextDueDate(dueDate, payload.frequency)
-        : dueDate;
+    const nextDueDate = dueDate;
 
     bill.name = payload.name.trim();
     bill.amount = payload.amount.toString();

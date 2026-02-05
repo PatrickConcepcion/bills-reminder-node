@@ -51,6 +51,7 @@ export async function getById(req: Request, res: Response) {
     if (!userId) return res.status(401).json({ message: "Unauthenticated" });
 
     const bill = await getBillById(userId, req.params.id as string);
+    if (!bill) return res.status(404).json({ message: "Bill not found" });
 
     return res.status(200).json({ bill });
   } catch (error) {
@@ -73,6 +74,7 @@ export async function update(req: Request, res: Response) {
     if (!userId) return res.status(401).json({ message: "Unauthenticated" });
 
     const bill = await updateBill(userId, req.params.id as string, data);
+    if (!bill) return res.status(404).json({ message: "Bill not found" });
 
     return res.status(200).json({ bill });
   } catch (error) {
@@ -93,6 +95,7 @@ export async function deleteById(req: Request, res: Response) {
     if (!userId) return res.status(401).json({ message: "Unauthenticated" });
 
     const bill = await deleteBill(userId, req.params.id as string);
+    if (!bill) return res.status(404).json({ message: "Bill not found" });
 
     return res.status(200).json({ bill });
   } catch (error) {
@@ -106,5 +109,4 @@ export async function deleteById(req: Request, res: Response) {
     return res.status(500).json({ message: "Internal server error" });
   }
 }
-
 
