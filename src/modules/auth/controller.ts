@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { registerSchema, loginSchema } from "./schemas";
 import { registerUser, loginUser, logoutUser, refreshUser, getMe } from "./service";
-import jwt from "jsonwebtoken";
 
 export async function register(req: Request, res: Response) {
     const data = registerSchema.parse(req.body);
