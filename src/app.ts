@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./modules/auth/routes";
+import billRoutes from "./modules/bills/router";
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/bills", billRoutes);
 
 export default app;
