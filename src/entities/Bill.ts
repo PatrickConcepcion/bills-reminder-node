@@ -17,6 +17,11 @@ export enum Frequency {
 
 @Entity()
 @Index(["userId"])
+<<<<<<< HEAD
+=======
+@Index(["nextDueDate"])
+@Index(["userId", "isActive"])
+>>>>>>> origin/master
 export class Bill {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
