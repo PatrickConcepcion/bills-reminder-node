@@ -29,13 +29,12 @@ function calculateNextDueDate(dueDate: Date, frequency: string | null | undefine
 export async function getAllBills(userId: string) {
   return repo.find({
     where: { userId },
-    order: { nextDueDate: "ASC" }
+    order: { dueDate: "ASC" }
   });
 }
 
 export async function createBill(userId: string, payload: CreateBillInput) {
   const dueDate = new Date(payload.dueDate);
-  const nextDueDate = dueDate;
 
   const bill = repo.create({
     userId,
@@ -46,9 +45,7 @@ export async function createBill(userId: string, payload: CreateBillInput) {
     isRecurring: payload.isRecurring,
     frequency: payload.frequency as Frequency | null ?? null,
     dueDate,
-    nextDueDate,
-    lastPaidAt: null,
-    isActive: payload.isActive
+    paidAt: null,
   });
 
   return repo.save(bill);
@@ -67,7 +64,6 @@ export async function updateBill(userId: string, id: string, payload: CreateBill
     if (!bill) return null;
 
     const dueDate = new Date(payload.dueDate);
-    const nextDueDate = dueDate;
 
     bill.name = payload.name.trim();
     bill.amount = payload.amount.toString();
@@ -76,9 +72,9 @@ export async function updateBill(userId: string, id: string, payload: CreateBill
     bill.isRecurring = payload.isRecurring;
     bill.frequency = payload.frequency as Frequency | null ?? null;
     bill.dueDate = dueDate;
-    bill.nextDueDate = nextDueDate;
-    bill.isActive = payload.isActive;
-
+    if (payload.paidAt !== undefined) {
+      bill.paidAt = payload.paidAt ? new Date(payload.paidAt) : null;
+    }
     return repo.save(bill);
 }
 
@@ -87,4 +83,34 @@ export async function deleteBill(userId: string, id: string) {
     if (!bill) return null;
 
     return repo.remove(bill);
+}
+
+export async function payBill(userId: string, id: string) {
+    const bill = await repo.findOne({ where: { userId, id } });
+    if (!bill) return null;
+    if (bill.paidAt) return { error: "already_paid" };
+
+    const now = new Date();
+    bill.paidAt = now;
+
+    let nextBill: Bill | null = null;
+    if (bill.isRecurring && bill.frequency) {
+        const nextDueDate = calculateNextDueDate(bill.dueDate, bill.frequency);
+        nextBill = repo.create({
+            userId,
+            name: bill.name,
+            amount: bill.amount,
+            currency: bill.currency,
+            description: bill.description,
+            isRecurring: true,
+            frequency: bill.frequency,
+            dueDate: nextDueDate,
+            paidAt: null,
+        });
+    }
+
+    const savedBill = await repo.save(bill);
+    const savedNextBill = nextBill ? await repo.save(nextBill) : null;
+
+    return { bill: savedBill, nextBill: savedNextBill };
 }

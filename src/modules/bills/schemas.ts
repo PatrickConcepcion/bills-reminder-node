@@ -20,7 +20,7 @@ export const billSchema = z
     isRecurring: z.boolean(),
     frequency: frequencyEnum.nullable().optional(),
     dueDate: z.string().datetime({ message: "dueDate must be an ISO datetime string" }),
-    isActive: z.boolean().optional().default(true)
+    paidAt: z.string().datetime({ message: "paidAt must be an ISO datetime string" }).nullable().optional()
   })
   .superRefine((data, ctx) => {
     // Validate recurring bills have frequency
