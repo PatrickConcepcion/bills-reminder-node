@@ -17,8 +17,11 @@ export enum Frequency {
 
 @Entity()
 @Index(["userId"])
+<<<<<<< HEAD
+=======
 @Index(["nextDueDate"])
 @Index(["userId", "isActive"])
+>>>>>>> origin/master
 export class Bill {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -50,14 +53,8 @@ export class Bill {
   @Column({ type: "datetime" })
   dueDate!: Date;
 
-  @Column({ type: "datetime" })
-  nextDueDate!: Date;
-
   @Column({ type: "datetime", nullable: true })
-  lastPaidAt!: Date | null;
-
-  @Column({ default: true })
-  isActive!: boolean;
+  paidAt!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

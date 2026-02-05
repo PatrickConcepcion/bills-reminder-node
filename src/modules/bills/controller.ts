@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ZodError } from "zod";
 import { billSchema } from "./schemas";
-import { createBill, getAllBills, getBillById, updateBill, deleteBill } from "./service";
+import { createBill, getAllBills, getBillById, updateBill, deleteBill, payBill } from "./service";
 
 export async function getAll(req: Request, res: Response) {
   try {
@@ -110,3 +110,26 @@ export async function deleteById(req: Request, res: Response) {
   }
 }
 
+export async function pay(req: Request, res: Response) {
+  try {
+    const userId = (req as unknown as { userId: string }).userId;
+    if (!userId) return res.status(401).json({ message: "Unauthenticated" });
+
+    const result = await payBill(userId, req.params.id as string);
+    if (!result) return res.status(404).json({ message: "Bill not found" });
+    if ("error" in result && result.error === "already_paid") {
+      return res.status(409).json({ message: "Bill already paid" });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ 
+        message: "Validation error",
+        errors: error.issues 
+      });
+    }
+
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
