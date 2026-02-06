@@ -6,9 +6,5 @@ export type CreateBillInput = {
   isRecurring: boolean;
   frequency?: "MONTHLY" | "WEEKLY" | "YEARLY" | null;
   dueDate: string;
-<<<<<<< HEAD
   paidAt?: string | null;
-=======
-  isActive: boolean;
->>>>>>> origin/master
 };
