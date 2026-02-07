@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./modules/auth/routes";
 import billRoutes from "./modules/bills/router";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 
 const app = express();
 
@@ -24,5 +25,8 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bills", billRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

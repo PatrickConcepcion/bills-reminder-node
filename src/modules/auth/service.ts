@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import { LoginInput, RefreshTokenResult, RegisterInput } from "./types";
+import { AppError } from "../../errors";
 
 const userRepo = AppDataSource.getRepository(User);
 const refreshTokenRepo = AppDataSource.getRepository(RefreshToken);
@@ -41,11 +42,15 @@ function hashRefreshToken(refreshToken: string): string {
 }
 
 export async function registerUser(payload: RegisterInput) {
-    if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
+    if (!JWT_SECRET) throw new AppError(500, "INTERNAL_SERVER_ERROR", "JWT_SECRET is not set");
     const { email, password, name } = payload;
     const existing = await userRepo.findOne({ where: { email } });
 
-    if (existing) throw new Error("Email already in use");
+    if (existing) {
+        throw new AppError(400, "VALIDATION_ERROR", "Validation failed", {
+            email: ["Email already in use"]
+        });
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = userRepo.create({ email, passwordHash, name });
@@ -55,14 +60,22 @@ export async function registerUser(payload: RegisterInput) {
 }
 
 export async function loginUser(payload: LoginInput) {
-    if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
+    if (!JWT_SECRET) throw new AppError(500, "INTERNAL_SERVER_ERROR", "JWT_SECRET is not set");
     const { email, password } = payload;
     const user = await userRepo.findOne({ where: { email } });
 
-    if (!user) throw new Error("Invalid credentials");
+    if (!user) {
+        throw new AppError(400, "VALIDATION_ERROR", "Invalid credentials", {
+            email: ["Invalid credentials"]
+        });
+    }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) throw new Error("Invalid credentials");
+    if (!isPasswordValid) {
+        throw new AppError(400, "VALIDATION_ERROR", "Invalid credentials", {
+            email: ["Invalid credentials"]
+        });
+    }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     const { refreshToken } = await createRefreshToken(user.id);
@@ -76,7 +89,7 @@ export async function loginUser(payload: LoginInput) {
 
 export async function getMe(userId: string) {
     const user = await userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new Error("User not found");
+    if (!user) throw new AppError(404, "NOT_FOUND", "User not found");
 
     return { id: user.id, email: user.email, name: user.name };
 }
@@ -94,18 +107,18 @@ export async function logoutUser(refreshToken: string) {
 }
 
 export async function refreshUser(refreshToken: string) {
-    if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
+    if (!JWT_SECRET) throw new AppError(500, "INTERNAL_SERVER_ERROR", "JWT_SECRET is not set");
     const tokenHash = hashRefreshToken(refreshToken);
     const tokenRecord = await refreshTokenRepo.findOne({ where: { tokenHash } });
 
-    if (!tokenRecord) throw new Error("Invalid refresh token");
+    if (!tokenRecord) throw new AppError(401, "UNAUTHENTICATED", "Invalid refresh token");
 
     if (tokenRecord.isRevoked) {
         await refreshTokenRepo.update(
             { familyId: tokenRecord.familyId },
             { isRevoked: true }
         );
-        throw new Error("Refresh token reuse detected");
+        throw new AppError(401, "UNAUTHENTICATED", "Refresh token reuse detected");
     }
 
     if (tokenRecord.expiresAt <= new Date()) {
@@ -113,13 +126,13 @@ export async function refreshUser(refreshToken: string) {
             { familyId: tokenRecord.familyId },
             { isRevoked: true }
         );
-        throw new Error("Refresh token expired");
+        throw new AppError(401, "UNAUTHENTICATED", "Refresh token expired");
     }
 
     await refreshTokenRepo.update({ id: tokenRecord.id }, { isRevoked: true });
 
     const user = await userRepo.findOne({ where: { id: tokenRecord.userId } });
-    if (!user) throw new Error("User not found");
+    if (!user) throw new AppError(404, "NOT_FOUND", "User not found");
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     const { refreshToken: nextRefreshToken } = await createRefreshToken(

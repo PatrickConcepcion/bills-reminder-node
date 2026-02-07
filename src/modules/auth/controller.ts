@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { registerSchema, loginSchema } from "./schemas";
 import { registerUser, loginUser, logoutUser, refreshUser, getMe } from "./service";
+import { AppError } from "../../errors";
 
 export async function register(req: Request, res: Response) {
     const data = registerSchema.parse(req.body);
@@ -49,30 +50,26 @@ export async function refresh(req: Request, res: Response) {
     const refreshToken = req.cookies?.refreshToken as string | undefined;
 
     if (!refreshToken) {
-        return res.status(401).json({ message: "Missing refresh token" });
+        throw new AppError(401, "UNAUTHENTICATED", "Missing refresh token");
     }
 
-    try {
-        const { user, token, refreshToken: nextRefreshToken } = await refreshUser(refreshToken);
+    const { user, token, refreshToken: nextRefreshToken } = await refreshUser(refreshToken);
 
-        res.cookie("accessToken", token, {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-            maxAge: 15 * 60 * 1000
-        });
+    res.cookie("accessToken", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: 15 * 60 * 1000
+    });
 
-        res.cookie("refreshToken", nextRefreshToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-            maxAge: 14 * 24 * 60 * 60 * 1000
-        });
+    res.cookie("refreshToken", nextRefreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: 14 * 24 * 60 * 60 * 1000
+    });
 
-        return res.status(200).json({ user });
-    } catch (error) {
-        return res.status(401).json({ message: "Invalid refresh token" });
-    }
+    return res.status(200).json({ user });
 }
 
 export async function me(req: Request, res: Response) {
