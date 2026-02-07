@@ -1,6 +1,7 @@
 import { AppDataSource } from "../../data-source";
 import { Bill, Frequency } from "../../entities/Bill";
-import { CreateBillInput } from "./types";
+import { CreateBillInput, GetBillsInput } from "./types";
+import { IsNull, LessThan, MoreThanOrEqual, Not } from "typeorm";
 
 const repo = AppDataSource.getRepository(Bill);
 
@@ -26,11 +27,40 @@ function calculateNextDueDate(dueDate: Date, frequency: string | null | undefine
   return nextDate;
 }
 
-export async function getAllBills(userId: string) {
-  return repo.find({
-    where: { userId },
-    order: { dueDate: "ASC" }
+export async function getAllBills(userId: string, query: GetBillsInput) {
+  const { page, limit, status } = query;
+  const offset = (page - 1) * limit;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const where =
+    status === "overdue"
+      ? { userId, paidAt: IsNull(), dueDate: LessThan(startOfToday) }
+      : status === "paid"
+        ? { userId, paidAt: Not(IsNull()) }
+        : { userId, paidAt: IsNull(), dueDate: MoreThanOrEqual(startOfToday) };
+
+  const [bills, total] = await repo.findAndCount({
+    where,
+    order: { dueDate: "ASC" },
+    skip: offset,
+    take: limit
   });
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return {
+    bills,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  };
 }
 
 export async function createBill(userId: string, payload: CreateBillInput) {

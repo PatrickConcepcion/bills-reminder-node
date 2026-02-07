@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { billSchema } from "./schemas";
+import { billListQuerySchema, billSchema } from "./schemas";
 import { createBill, getAllBills, getBillById, updateBill, deleteBill, payBill } from "./service";
 import { AppError } from "../../errors";
 
@@ -11,9 +11,10 @@ function getUserId(req: Request): string {
 
 export async function getAll(req: Request, res: Response) {
   const userId = getUserId(req);
-  const bills = await getAllBills(userId);
+  const query = billListQuerySchema.parse(req.query);
+  const result = await getAllBills(userId, query);
 
-  return res.status(200).json({ bills });
+  return res.status(200).json(result);
 }
 
 export async function create(req: Request, res: Response) {
