@@ -11,6 +11,14 @@ const amountSchema = z
     message: "Amount must be a non-negative number"
   });
 
+const positiveInt = z.coerce.number().int().min(1);
+
+export const billListQuerySchema = z.object({
+  page: positiveInt.optional().default(1),
+  limit: positiveInt.max(50).optional().default(12),
+  status: z.enum(["overdue", "upcoming", "paid"]).optional().default("upcoming")
+});
+
 export const billSchema = z
   .object({
     name: z.string().min(1, "Name is required").max(255, "Name must not exceed 255 characters"),

@@ -1,5 +1,5 @@
 const billRepo = {
-  find: jest.fn(),
+  findAndCount: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
@@ -54,16 +54,20 @@ describe("bills service", () => {
     expect(billRepo.save).toHaveBeenCalled();
   });
 
-  it("fetches all bills ordered by due date", async () => {
-    billRepo.find.mockResolvedValue([]);
+  it("fetches paginated bills ordered by due date", async () => {
+    billRepo.findAndCount.mockResolvedValue([[], 0]);
     const { getAllBills } = await loadService();
 
-    await getAllBills("user-1");
+    await getAllBills("user-1", { page: 1, limit: 12, status: "upcoming" });
 
-    expect(billRepo.find).toHaveBeenCalledWith({
-      where: { userId: "user-1" },
-      order: { dueDate: "ASC" }
-    });
+    expect(billRepo.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: "user-1" }),
+        order: { dueDate: "ASC" },
+        skip: 0,
+        take: 12
+      })
+    );
   });
 
   it("returns null when updating a missing bill", async () => {
